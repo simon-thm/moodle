@@ -324,17 +324,9 @@ class auth extends \auth_plugin_base {
             // Get the old value.
             $oldvalue = (string)$userdata->$fieldname;
 
-            // Get the lock configuration of the field.
-            $lockvalue = $this->config->{'field_lock_' . $fieldname};
-
-            // We should update fields that meet the following criteria:
-            // - Lock value set to 'unlocked'; or 'unlockedifempty', given the current value is empty.
-            // - The value has changed.
-            if ($lockvalue === 'unlocked' || ($lockvalue === 'unlockedifempty' && empty($oldvalue))) {
+            if ($oldvalue !== $value) {
                 $value = (string)$value;
-                if ($oldvalue !== $value) {
-                    $user->$fieldname = $value;
-                }
+                $user->$fieldname = $value;
             }
         }
         // Update the user data.
