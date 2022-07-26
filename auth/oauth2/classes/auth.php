@@ -508,27 +508,6 @@ class auth extends \auth_plugin_base {
         }
 
         if (!$userwasmapped) {
-            // No defined mapping - we need to see if there is an existing account with the same email.
-
-            $moodleuser = \core_user::get_user_by_email($userinfo['email']);
-            if (!empty($moodleuser)) {
-                if ($issuer->get('requireconfirmation')) {
-                    $PAGE->set_url('/auth/oauth2/confirm-link-login.php');
-                    $PAGE->set_context(context_system::instance());
-
-                    \auth_oauth2\api::send_confirm_link_login_email($userinfo, $issuer, $moodleuser->id);
-                    // Request to link to existing account.
-                    $emailconfirm = get_string('emailconfirmlink', 'auth_oauth2');
-                    $message = get_string('emailconfirmlinksent', 'auth_oauth2', $moodleuser->email);
-                    $this->print_confirm_required($emailconfirm, $message);
-                    exit();
-                } else {
-                    \auth_oauth2\api::link_login($userinfo, $issuer, $moodleuser->id, true);
-                    $userinfo = $this->update_user($userinfo, $moodleuser);
-                    // No redirect, we will complete this login.
-                }
-
-            } else {
                 // This is a new account.
                 $exists = \core_user::get_user_by_username($userinfo['username']);
                 // Creating a new user?
@@ -592,9 +571,7 @@ class auth extends \auth_plugin_base {
                     $userinfo = get_complete_user_data('id', $newuser->id);
                     // No redirect, we will complete this login.
                 }
-            }
         }
-
         // We used to call authenticate_user - but that won't work if the current user has a different default authentication
         // method. Since we now ALWAYS link a login - if we get to here we can directly allow the user in.
         $user = (object) $userinfo;
