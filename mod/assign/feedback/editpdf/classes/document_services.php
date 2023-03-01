@@ -25,6 +25,7 @@
 namespace assignfeedback_editpdf;
 
 use DOMDocument;
+use stored_file;
 
 /**
  * Functions for generating the annotated pdf.
@@ -194,7 +195,12 @@ EOD;
                         $mimetype = $file->get_mimetype();
                         // PDF File, no conversion required.
                         if ($mimetype === 'application/pdf') {
-                            $files[$filename] = $file;
+                            $preserveannotations = get_config('assignfeedback_editpdf', 'preserve_annotations');
+                            if ($preserveannotations) {
+                                $files[$filename] = self::preserve_annotations($file);
+                            } else {
+                                $files[$filename] = $file;
+                            }
                         } else if ($plugin->allow_image_conversion() && $mimetype === "image/jpeg") {
                             // Rotates image based on the EXIF value.
                             list ($rotateddata, $size) = $file->rotate_image();
@@ -261,6 +267,43 @@ EOD;
         $combineddocument->set_source_files($files);
 
         return $combineddocument;
+    }
+
+    /**
+     * This function will run a pdf through ghostscript in order to preserve its annotations as actual content.
+     * @param \stored_file $file //pdf file which annotated contents are to be preserved.
+     * @return \stored_file // new file with preserved annotations
+     */
+    protected static function preserve_annotations($file): stored_file {
+        global $CFG;
+        $tempfile = $file->copy_content_to_temp();
+        $gsexec = \escapeshellarg($CFG->pathtogs);
+        $dir = make_temp_directory("preserve_annot");
+        $outfile = tempnam($dir, "pa_");
+        exec("$gsexec -sDEVICE=pdfwrite -dPDFSETTINGS=/default -dNOPAUSE ".
+        "-dQUIET -dBATCH -dPreserveAnnots=false ".
+        "-sOutputFile=$outfile $tempfile");
+
+        $fileinfo = [
+            'contextid' => $file->get_contextid(),   // ID of the context.
+            'component' => $file->get_component(), // Your component name.
+            'filearea' => $file->get_filearea(),       // Usually = table name.
+            'itemid' => 0,              // Usually = ID of row in table.
+            'filepath' => $file->get_filepath(),            // Any path beginning and ending in /.
+            'filename' => "pa_" . $file->get_filename(),   // Any filename.
+        ];
+        $fs = get_file_storage();
+
+        $oldfile = $fs->get_file($fileinfo['contextid'], $fileinfo['component'], $fileinfo['filearea'],
+        $fileinfo['itemid'], $fileinfo['filepath'], $fileinfo['filename']);
+
+        // Delete it if it exists.
+        if ($oldfile) {
+            $oldfile->delete();
+        }
+
+        $outfile = $fs->create_file_from_pathname($fileinfo, $outfile);
+        return $outfile;
     }
 
     /**

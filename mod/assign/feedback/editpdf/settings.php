@@ -38,6 +38,11 @@ $setting = new admin_setting_configstoredfile($name, $title, $description, 'stam
     array('maxfiles' => 8, 'accepted_types' => array('image')));
 $settings->add($setting);
 
+// Preserve Annotations.
+$settings->add(new admin_setting_configcheckbox("assignfeedback_editpdf/preserve_annotations",
+get_string("preserve_annotations", "assignfeedback_editpdf"),
+get_string("preserve_annotations_desc", "assignfeedback_editpdf"), 0));
+
 // Ghostscript setting.
 $systempathslink = new moodle_url('/admin/settings.php', array('section' => 'systempaths'));
 $systempathlink = html_writer::link($systempathslink, get_string('systempaths', 'admin'));
@@ -47,3 +52,4 @@ $settings->add(new admin_setting_heading('pathtogs', get_string('pathtogs', 'adm
 $url = new moodle_url('/mod/assign/feedback/editpdf/testgs.php');
 $link = html_writer::link($url, get_string('testgs', 'assignfeedback_editpdf'));
 $settings->add(new admin_setting_heading('testgs', '', $link));
+
